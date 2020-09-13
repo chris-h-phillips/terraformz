@@ -1,0 +1,27 @@
+# fcct will turn this into a proper ignition json that fcos will use
+#  docker run -i --rm quay.io/coreos/fcct:release --pretty --strict < jenkins.fcc | base64 | pbcopy
+# TODO: automate the running of this tool and passing in to the terraform. the ignition provider in tf makes a 2.x
+#       version of the ignition config which doesn't let instances start.
+#       https://github.com/terraform-providers/terraform-provider-ignition/pull/69
+variant: fcos
+version: 1.1.0
+systemd:
+  units:
+    - name: jenkins.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Jenkins
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        TimeoutStartSec=0
+        ExecStartPre=-/bin/podman kill jenkins1
+        ExecStartPre=-/bin/podman rm jenkins1
+        ExecStartPre=/bin/podman pull jenkins/jenkins:lts
+        ExecStart=/bin/podman run --name jenkins1 -p 50000:50000 -p 80:8080 -v jenkins_home:/var/jenkins_home jenkins/jenkins:lts
+
+        [Install]
+        WantedBy=multi-user.target
+
